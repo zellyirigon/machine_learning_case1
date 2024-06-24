@@ -1,0 +1,105 @@
+getwd()
+# Case Study 1 - Feature Engineering with Categorical Variables in Practice
+
+# Let's look at some examples of feature engineering tasks!
+
+# For this case study, I will use this data set with banking data of users:
+
+# Dataset: http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip
+
+dataset_bank <- read.table("bank/bank-full.csv", header = TRUE, sep =';')
+View(dataset_bank)
+
+# Example 1 - Creating a new column
+table(dataset_bank$job)
+
+library(dplyr)
+library(ggplot2)
+
+dataset_bank %>%
+  group_by(job)%>%
+  summarise(n = n())%>%
+  ggplot(aes(x = job, y = n))+
+  geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# The mutate function from dplyr is very useful when you are reassigning many different 
+# levels of a variable, instead of using some nested ifelse function.
+# This function is also very useful when converting numerical variables into categorical data.
+  
+# Creating a new column with the technology level of each customer. In this case I will keep
+# in categorical variable (string)
+dataset_bank <- dataset_bank %>%
+  mutate(technology_use =
+           case_when(job == 'admin.'~ 'medium',
+                     job == 'blue-collar' ~ 'low',
+                     job == 'entrepreneur' ~ 'high',
+                     job == 'housemaid' ~ 'low',
+                     job == 'management' ~ 'medium',
+                     job == 'retired' ~ 'low',
+                     job == 'self-employed' ~ 'low',
+                     job == 'services' ~ 'medium',
+                     job == 'student' ~ 'high',
+                     job == 'technician' ~ 'high',
+                     job == 'unemployed' ~ 'low',
+                     job == 'unknown' ~ 'low'))
+View(dataset_bank)
+
+table(dataset_bank$technology_use)
+# Showing in percentage
+round(prop.table(table(dataset_bank$technology_use)),2)
+
+
+# Example 2 -> Dummies Variable
+
+# A dummy variable is the numerical representation of a categorical variable.
+
+# The "default" column represents whether a user has entered into an overdraft or not. 
+# Instead of leaving the levels of the default variable as "yes" and "no," I will encode it as a dummy variable.
+# Whenever the default value is "yes," I will encode it as 1 and 0 otherwise. 
+# For two mutually exclusive level variables, this eliminates the need for an additional column, 
+# as it is implied in the first column.
+dataset_bank <- dataset_bank %>%
+  mutate(defaulted = ifelse(default == 'yes', 1, 0))
+table(dataset_bank$defaulted)
+
+# Example 3 -> One Hot Encoding (One hot vector)
+
+# Converting all categorical variables from the dataset in numerical variables
+library(caret)
+# Creating the function 'dummyVars'. It will create a set of 
+# dummy variables(one hot encoding corresponding to categorical variables), that will be stored in 'dmy'
+# '~ .' this syntax indicates that I am using all explanatory variables from the dataset
+dmy <- dummyVars("~ .", data = dataset_bank)
+
+# A new dataset is created only with dummy variables
+bank.dummies <- data.frame(predict(dmy, newdata = dataset_bank))
+
+View(bank.dummies)
+
+# Example 4 <- Combining Resources or Feature Cross
+#Feature crossing is the combination of multiple variables. Sometimes, the combination of variables can produce a 
+# predictive performance that exceeds what they could achieve individually.
+# Thus, it is possible to create a grouping by two variables, for example, with the appropriate count:
+dataset_bank %>%
+  group_by(job, marital) %>%
+  summarise(n = n())
+
+# using a graph
+dataset_bank %>% 
+  group_by(job, marital) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x = job, y = n, fill = marital))+
+  geom_bar(stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Dummy variable from 2 variables 
+dmy <- dummyVars(~ job:marital, data = dataset_bank)
+bank.cross <- predict(dmy, newdata = dataset_bank)
+View(bank.cross)
+
+# There are many additional methods that can be used for numerical variables and combinations of numeric 
+# and categorical variables; we can use PCA, among other things, to enhance the predictive power of 
+# the explanatory variables.
+
+# END
